@@ -38,6 +38,10 @@ if(WIN32)
     list(APPEND CMAKE_PREFIX_PATH "${QT_MSVC_PATH}")
 endif()
 
+list(APPEND CMAKE_PREFIX_PATH "${QT_MSVC_PATH}")
+    # 確保子程序在執行時能找到 qtpaths.exe 與 Qt 工具鏈
+    cmake_path(CONVERT "${QT_MSVC_PATH}/bin" TO_NATIVE_PATH_LIST QT_BIN_NATIVE)
+    set(ENV{PATH} "${QT_BIN_NATIVE};$ENV{PATH}")
 # ---------------------------------------------------------------------------
 # 2. Qt 模組搜尋與設定
 # ---------------------------------------------------------------------------
@@ -111,6 +115,7 @@ if(TARGET KF6::SyntaxHighlighting)
 else()
     message(STATUS "Building syntax-highlighting and dependencies via external build...")
 
+    set(REQUIRED_QT_VERSION 6.8.0)
     include(ExternalProject)
     set(THIRD_PARTY_INSTALL_DIR "${CMAKE_BINARY_DIR}/third_party_install")
 
@@ -123,12 +128,13 @@ else()
         CMAKE_ARGS          
             -DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_INSTALL_DIR}
             -DCMAKE_PREFIX_PATH=${QT_MSVC_PATH}
+            -DQT_INSTALL_PREFIX=${QT_MSVC_PATH}
             -DBUILD_TESTING=OFF
             -DQT_MAJOR_VERSION=6
         BUILD_ALWAYS        OFF
     )
 
-    # 2. 依照你提供的指令建置 syntax-highlighting，並注入剛剛建置好的 ECM
+    # 2. 依照指令建置 syntax-highlighting，並注入 ECM 與 Qt 前綴
     ExternalProject_Add(
         build_syntax_highlighting
         DEPENDS             build_ecm
@@ -138,10 +144,12 @@ else()
         PREFIX              "${CMAKE_BINARY_DIR}/syntax-highlighting"
         CMAKE_ARGS
             -DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_INSTALL_DIR}
-            -DCMAKE_PREFIX_PATH=${THIRD_PARTY_INSTALL_DIR};${QT_MSVC_PATH}
+            -DQT_INSTALL_PREFIX=${QT_MSVC_PATH}
             -DBUILD_TESTING=OFF
             -DBUILD_QCH=OFF
             -DQT_MAJOR_VERSION=6
+        CMAKE_CACHE_ARGS
+            -DCMAKE_PREFIX_PATH:PATH=${THIRD_PARTY_INSTALL_DIR};${QT_MSVC_PATH}
         BUILD_ALWAYS        OFF
     )
 
